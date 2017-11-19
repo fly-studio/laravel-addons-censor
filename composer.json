@@ -33,7 +33,7 @@
     "extra": {
         "laravel": {
             "providers": [
-                "Addons\\Censor\\ServiceProvider::class,"
+                "Addons\\Censor\\ServiceProvider"
             ],
             "aliases": {
             }
