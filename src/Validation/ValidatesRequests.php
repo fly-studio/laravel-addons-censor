@@ -2,9 +2,11 @@
 
 namespace Addons\Censor\Validation;
 
+use RuntimeException;
 use Addons\Censor\Factory;
 use Illuminate\Http\Request;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Contracts\Support\Arrayable;
 use Addons\Censor\Exceptions\CensorException;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Validation\ValidatesRequests as BaseValidatesRequests;
@@ -29,14 +31,30 @@ trait ValidatesRequests
 	 * @param  Model|null $model
 	 * @return array|Exception
 	 */
-	public function censor(Request $request, $censorKey, $attributes, Model $model = null)
+	public function censor($request, string $censorKey, array $attributes, array $replacement = null)
 	{
-		$input = $request->all();
-		$json = $request->json()->all();
+		$data = null;
 
-		$censor = $this->getCensorFactory()->make($censorKey, $attributes, $model)->data(is_array($json) ? array_merge($input, $json) : $input);
+		if ($request instanceof Request)
+		{
+			$data = $request->all();
+			//$json = $request->json()->all();
+
+			//$data = is_array($json) ? array_merge($input, $json) : $input;
+		} else if ($request instanceof Arrayable)
+		{
+			$data = $request->toArray();
+		} else if (is_array($request))
+		{
+			$data = $request;
+		} else {
+			throw new RuntimeException('The parameter#0 must be Array or Request.');
+		}
+
+		$censor = $this->getCensorFactory()->make($censorKey, $attributes, $replacement)->data($data);
 		$validator = $censor->validator();
-		return $validator->fails() ? $this->throwValidationException($request, $validator) : $censor->validData();
+
+		return $validator->fails() ? $this->throwValidationException($data, $validator) : $censor->validData();
 	}
 
 	/**
@@ -48,9 +66,9 @@ trait ValidatesRequests
 	 *
 	 * @throws Addons\Censor\Exceptions\CensorException
 	 */
-	protected function throwValidationException(Request $request, $validator)
+	protected function throwValidationException(array $data, $validator)
 	{
-		throw new CensorException($request, $validator);
+		throw new CensorException($data, $validator);
 	}
 
 	/**

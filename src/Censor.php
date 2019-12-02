@@ -12,15 +12,15 @@ class Censor {
 	protected $data;
 	protected $censorKey;
 	protected $attributes;
-	protected $replace;
+	protected $replacement;
 	protected $validations;
 
-	public function __construct(Ruler $ruler, $censorKey, $attributes, $replace = [], $locale = null)
+	public function __construct(Ruler $ruler, string $censorKey, array $attributes, array $replacement = null, string $locale = null)
 	{
 		$this->ruler = $ruler;
 		$this->censorKey = $censorKey;
-		$this->replace = $replace;
-		$this->validations = $ruler->get($censorKey, $attributes, $replace, $locale);
+		$this->replacement = $replacement;
+		$this->validations = $ruler->get($censorKey, $attributes, $replacement, $locale);
 		$this->attributes = array_keys($this->validations);
 	}
 
@@ -29,16 +29,17 @@ class Censor {
 		return Arr::only($this->parseData($this->data), $this->attributes);
 	}
 
-	public function data($data = null)
+	public function data(array $data = null)
 	{
 		if (is_null($data))
-			return ($this->data);
+			return $this->data;
 
 		$this->data = $data;
+
 		return $this;
 	}
 
-	protected function parseData($data)
+	protected function parseData(array $data)
 	{
 		$newData = [];
 
@@ -70,9 +71,9 @@ class Censor {
 		return $this->censorKey;
 	}
 
-	public function replace()
+	public function replacement()
 	{
-		return $this->replace;
+		return $this->replacement;
 	}
 
 	public function messagesWithDot()
@@ -83,12 +84,15 @@ class Censor {
 	public function messages()
 	{
 		$messages = [];
+
 		foreach($this->validations as $attribute => $line)
 		{
 			if (!isset($line['message']))
 				continue;
+
 			$messages[$attribute] = $line['message'];
 		}
+
 		return $messages;
 	}
 
@@ -96,6 +100,7 @@ class Censor {
 	{
 		$validator = $this->validator();
 		$messages = [];
+
 		foreach($this->validations as $attribute => $line)
 		{
 			if (!isset($line['message']))
@@ -103,35 +108,41 @@ class Censor {
 			foreach($line['message'] as $rule => $text)
 				$messages[$attribute][$rule] = $validator->makeReplacements($text, $line['name'], $rule, $line['rules']->ruleParameters($rule) ?? []);
 		}
-		return $messages;
 
+		return $messages;
 	}
 
 	public function names()
 	{
 		$names = [];
+
 		foreach($this->validations as $attribute => $line)
 		{
 			if (!isset($line['name']))
 				continue;
 			$names[$attribute] = $line['name'];
 		}
+
 		return $names;
 	}
 
 	public function originalRules()
 	{
 		$rules = [];
+
 		foreach($this->validations as $attribute => $line)
 			$rules[$attribute] = $line['rules']->originalRules();
+
 		return $rules;
 	}
 
 	public function rules()
 	{
 		$rules = [];
+
 		foreach($this->validations as $attribute => $line)
 			$rules[$attribute] = $line['rules']->rules();
+
 		return $rules;
 	}
 
