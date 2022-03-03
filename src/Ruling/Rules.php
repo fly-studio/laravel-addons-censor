@@ -4,6 +4,8 @@ namespace Addons\Censor\Ruling;
 
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationRuleParser;
+use Illuminate\Contracts\Validation\Rule as RuleContract;
+use Illuminate\Validation\NestedRules;
 
 class Rules {
 
@@ -44,7 +46,7 @@ class Rules {
 		{
 			if (empty($ruleName))
 				continue;
-			$parameters = empty($parameters) ? true : (count($parameters) == 1 ? $parameters[0] : $parameters);
+			$parameters = empty($parameters) || $parameters instanceof RuleContract || $parameters instanceof NestedRules ? true : (count($parameters) == 1 ? $parameters[0] : $parameters);
 			$ruleName = strtolower($ruleName);
 			switch ($ruleName) { // 1
 				case 'alpha':
@@ -193,8 +195,6 @@ class Rules {
 		return $rules;
 	}
 
-
-
 	protected function parse($ruleLines, array $replacement = null)
 	{
 		$this->originalRules = [];
@@ -208,10 +208,15 @@ class Rules {
 
 		foreach($ruleLines as $line)
 		{
-			$line = $this->replace($line, $replacement);
+			if (is_string($line))
+				$line = $this->replace($line, $replacement);
 			list($ruleName, $parameters) = ValidationRuleParser::parse($line);
 			$this->originalRules[] = $line;
-			$this->rules[$ruleName] = $parameters;
+			if ($ruleName instanceof RuleContract || $ruleName instanceof NestedRules) {
+				$this->rules[get_class($ruleName)] = $ruleName;
+			} else {
+				$this->rules[$ruleName] = $parameters;
+			}
 		}
 	}
 
