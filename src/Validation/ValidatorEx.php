@@ -102,6 +102,8 @@ class ValidatorEx extends BaseValidator {
 			return count($value);
 		} elseif ($value instanceof File) {
 			return $value->getSize() / 1024;
+		} elseif (is_null($value)) {
+			return 0;
 		}
 
 		//宽字节按照字体的几个宽度计算，比如「微软雅黑」下，汉字占据两个显示宽度
