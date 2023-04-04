@@ -9,7 +9,7 @@ class FileLoader extends Base {
     public function getPath(string $locale, string $group, string $namespace = null)
     {
         if (is_null($namespace) || $namespace == '*')
-            return $this->getBasePath($this->path, $locale, $group);
+            return $this->getBasePath($this->paths[0], $locale, $group);
 
         return $this->getNamespacedPath($locale, $group, $namespace);
     }
