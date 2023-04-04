@@ -16,8 +16,8 @@
     ],
     "require": {
         "php": ">=7.0",
-        "illuminate/validation": "10.0",
-        "illuminate/translation": "10.0"
+        "illuminate/validation": "^10.0",
+        "illuminate/translation": "^10.0"
     },
     "autoload": {
         "psr-4": {
