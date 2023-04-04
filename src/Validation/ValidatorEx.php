@@ -82,39 +82,6 @@ class ValidatorEx extends BaseValidator {
     }
 
     /**
-     * Get the size of an attribute.
-     *
-     * @param  string  $attribute
-     * @param  mixed   $value
-     * @return mixed
-     */
-    protected function getSize($attribute, $value)
-    {
-        $hasNumeric = $this->hasRule($attribute, $this->numericRules);
-
-        // This method will determine if the attribute is a number, string, or file and
-        // return the proper size accordingly. If it is a number, then number itself
-        // is the size. If it is a file, we take kilobytes, and for a string the
-        // entire length of the string will be considered the attribute size.
-        if (is_numeric($value) && $hasNumeric) {
-            return $value;
-        } elseif (is_array($value)) {
-            return count($value);
-        } elseif ($value instanceof File) {
-            return $value->getSize() / 1024;
-        } elseif (is_null($value)) {
-            return 0;
-        }
-
-        //宽字节按照字体的几个宽度计算，比如「微软雅黑」下，汉字占据两个显示宽度
-        $rule = $this->getRule($attribute, 'Ansi');
-        $ansiWidth = empty($rule) || empty($rule[1]) ? 1 : intval($rule[1][0]);
-
-        return strlen_ansi($value, 'UTF-8', $ansiWidth);
-        //return mb_strlen($value);
-    }
-
-    /**
      * Handle dynamic calls to class methods.
      *
      * @param  string  $method
