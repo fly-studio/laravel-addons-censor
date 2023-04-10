@@ -1,22 +1,41 @@
 <?php
 
-namespace Addons\Censor\Ruling;
+namespace Addons\Censor\Validation;
 
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationRuleParser;
-use Illuminate\Contracts\Validation\ValidationRule;
-use Illuminate\Validation\NestedRules;
 
-class Rules {
+class Validation {
 
+    protected array|string|null $rawRules;
     protected string $attribute;
-    protected ?array $rules;
+    protected ?string $name;
+    protected ?array $computedRules;
+    protected ?array $messages;
     protected ?array $originalRules;
 
-    public function __construct(string $attribute, $ruleLines, ?array $replacement = null)
+    public function __construct(string $attribute, ?string $name, array|string|null $rawRules, ?array $messages = null)
     {
         $this->attribute = $attribute;
-        $this->parse($ruleLines, $replacement);
+        $this->name = $name;
+        $this->rawRules = $rawRules;
+        $this->messages = $messages;
+    }
+
+    public function rawRules(): array|string|null {
+        return $this->rawRules;
+    }
+
+    public function attribute(): string {
+        return $this->attribute;
+    }
+
+    public function name(): string {
+        return $this->name;
+    }
+
+    public function messages(): ?array {
+        return $this->messages;
     }
 
     public function originalRules(): ?array
@@ -24,31 +43,32 @@ class Rules {
         return $this->originalRules;
     }
 
-    public function rules(): ?array
+    public function computedRules(): ?array
     {
-        return $this->rules;
+        return $this->computedRules;
     }
 
-    public function ruleParameters(string $ruleName): null|array|ValidationRule|NestedRules
+    public function ruleParameters(string $ruleName): null|array|object
     {
         $ruleName = Str::studly($ruleName);
-        return $this->rules[$ruleName] ?? null;
+        return $this->computedRules[$ruleName] ?? null;
     }
 
-    public function js()
+    public function jsRules()
     {
         $rules = [];
         // <input name="rule[]" />
         $attribute = $this->isArray() ? $this->attribute. '[]' : $this->attribute;
 
         $rules[$attribute] = [];
-        foreach($this->rules() as $ruleName => $parameters)
+        foreach($this->computedRules() as $ruleName => $parameters)
         {
             if (empty($ruleName))
                 continue;
-            $parameters = empty($parameters) || $parameters instanceof ValidationRule || $parameters instanceof NestedRules
+            $parameters = empty($parameters) || is_object($parameters)
                 ? true
                 : (count($parameters) == 1 ? $parameters[0] : $parameters);
+
             $ruleName = strtolower($ruleName);
 
             switch ($ruleName) { // 1
@@ -197,52 +217,43 @@ class Rules {
         return $rules;
     }
 
-    protected function parse($ruleLines, ?array $replacement = null): void
+    public function parse(?array $input = null, ?array $extraData = null): void
     {
         $this->originalRules = [];
-        $this->rules = [];
+        $this->computedRules = [];
+        $rawRules = $this->rawRules;
 
-        if (empty($ruleLines))
+        if (empty($rawRules))
             return;
 
-        if (!is_array($ruleLines))
-            $ruleLines = explode('|', $ruleLines);
+        if (!is_array($rawRules))
+            $rawRules = explode('|', $rawRules);
 
-        foreach($ruleLines as $line)
+        foreach($rawRules as $rule)
         {
-            if (is_string($line))
-                $line = $this->replace($line, $replacement);
+            if ($rule instanceof \Closure)
+                $rule = $this->callRule($rule, $input, $extraData);
 
-            [$ruleName, $parameters] = ValidationRuleParser::parse($line);
+            [$ruleName, $parameters] = ValidationRuleParser::parse($rule);
 
-            $this->originalRules[] = $line;
-            if ($ruleName instanceof ValidationRule || $ruleName instanceof NestedRules) {
-                $this->rules[get_class($ruleName)] = $ruleName;
+            $this->originalRules[] = $rule;
+            if (is_object($ruleName)) {
+                $this->computedRules[get_class($ruleName)] = $ruleName;
             } else {
-                $this->rules[$ruleName] = $parameters;
+                $this->computedRules[$ruleName] = $parameters;
             }
         }
     }
 
-    protected function replace(string $line, ?array $replacement = null): string
-    {
-        $line = str_replace(',{{attribute}}', ','.$this->attribute, $line);
-        //替换rule中的{{  }}
-        $pattern = '/,\{\{([a-z0-9_\-]*)\}\}/i';
-
-        return empty($replacement)
-            ? preg_replace($pattern, '', $line)
-            : preg_replace_callback($pattern, function( $matches ) use ($replacement){
-                $key = $matches[1];
-                return isset($replacement[$key]) ? ','.$replacement[$key] : '';
-            }, $line);
+    protected function callRule(\Closure $callback, ?array $input = null, ?array $extraData = null) {
+        return call_user_func_array($callback, [$this, $input, $extraData]);
     }
 
     public function isNumeric(): bool
     {
         foreach(['Digits', 'DigitsBetween', 'Numeric', 'Integer'] as $pattern)
         {
-            if (array_key_exists($pattern, $this->rules()))
+            if (array_key_exists($pattern, $this->computedRules()))
                 return true;
         }
 
@@ -251,7 +262,7 @@ class Rules {
 
     public function isArray(): bool
     {
-        return array_key_exists('Array', $this->rules());
+        return array_key_exists('Array', $this->computedRules());
     }
 
 }

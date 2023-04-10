@@ -14,9 +14,11 @@ trait ValidatesRequests
 {
     use BaseValidatesRequests;
 
-    public function censorScripts($censorKey, $attributes, ?array $replacement = null)
+    public function censorScripts($censorKey, $attributes, ?array $extraData = null)
     {
-        $censor = $this->getCensorFactory()->make($censorKey, $attributes, $replacement);
+        $censor = $this->getCensorFactory()->make($censorKey, $attributes)
+            ->extraData($extraData)
+            ->build();
 
         return $censor->js();
     }
@@ -27,26 +29,29 @@ trait ValidatesRequests
      * @param  Request $request
      * @param  string  $censorKey
      * @param  array  $attributes
-     * @param  Model|null $model
+     * @param  ?array $extraData
      * @return array|\Throwable
      */
-    public function censor($request, string $censorKey, array $attributes, ?array $replacement = null): ?array {
-        $data = null;
+    public function censor($request, string $censorKey, array $attributes, ?array $extraData = null): ?array {
+        $input = null;
 
         if ($request instanceof Request) {
-            $data = $request->all();
+            $input = $request->all();
         } else if ($request instanceof Arrayable) {
-            $data = $request->toArray();
+            $input = $request->toArray();
         } else if (is_array($request)) {
-            $data = $request;
+            $input = $request;
         } else {
             throw new RuntimeException('The parameter#0 must be Array or Request.');
         }
 
-        $censor = $this->getCensorFactory()->make($censorKey, $attributes, $replacement)->data($data);
+        $censor = $this->getCensorFactory()->make($censorKey, $attributes)
+            ->input($input)
+            ->extraData($extraData)
+            ->build();
         $validator = $censor->validator();
 
-        return $validator->fails() ? $this->throwValidationException($data, $validator) : $censor->validData();
+        return $validator->fails() ? $this->throwValidationException($input, $validator) : $censor->output();
     }
 
     /**

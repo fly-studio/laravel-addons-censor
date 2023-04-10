@@ -4,62 +4,90 @@ namespace Addons\Censor;
 
 use Illuminate\Support\Str;
 use Illuminate\Support\Arr;
-use Addons\Censor\Ruling\Ruler;
+use Addons\Censor\Validation\ValidationLoader;
 use Addons\Censor\Validation\ValidatorEx;
 use Illuminate\Contracts\Validation\Factory;
 use Illuminate\Validation\Factory as FactoryInstance;
 
 class Censor {
 
-    protected ?array $data;
+    protected CensorLoader $loader;
+    protected ?array $input;
     protected string $censorKey;
+    protected ?string $locale;
     protected ?array $attributes;
-    protected ?array $replacement;
+    protected ?array $extraData;
     protected ?array $validations;
 
-    public function __construct(Ruler $ruler, string $censorKey, array $attributes, ?array $replacement = null, ?string $locale = null)
+    public function __construct(CensorLoader $loader, string $censorKey, array $attributes, ?array $extraData = null, ?string $locale = null)
     {
         $this->censorKey = $censorKey;
-        $this->replacement = $replacement;
-        $this->validations = $ruler->get($censorKey, $attributes, $replacement, $locale);
-        $this->attributes = array_keys($this->validations);
+        $this->attributes = $attributes;
+        $this->extraData = $extraData;
+        $this->locale = $locale;
+        $this->loader = $loader;
     }
 
-    public function validData(): array
-    {
-        return Arr::only($this->parseData($this->data), $this->attributes);
-    }
+    public function build(): static {
+        if (!empty($this->validations)) {
+            return $this;
+        }
 
-    public function data(?array $data = null): static|array|null
-    {
-        if (is_null($data))
-            return $this->data;
+        $validations = $this->loader->get($this->censorKey, $this->attributes, $this->locale);
+        $this->attributes = array_keys($validations);
+        $this->validations = $validations;
 
-        $this->data = $data;
+        foreach($validations as $validation) {
+            $validation->parse($this->input(), $this->extraData());
+        }
 
         return $this;
     }
 
-    protected function parseData(array $data): array
+    public function output(): array
     {
-        $newData = [];
+        return Arr::only($this->parseInput($this->input()), $this->attributes);
+    }
+
+    public function input(?array $input = null): static|array|null
+    {
+        if (func_num_args() == 0)
+            return $this->input;
+
+        $this->input = $input;
+        return $this;
+    }
+
+    public function extraData(?array $extraData = null): array|static|null
+    {
+        if (func_num_args() == 0)
+            return $this->extraData;
+
+        $this->extraData = $extraData;
+        return $this;
+    }
+
+
+    protected function parseInput(array $data): array
+    {
+        $result = [];
 
         foreach ($data as $key => $value) {
             if (is_array($value)) {
-                $value = $this->parseData($value);
+                $value = $this->parseInput($value);
             }
 
             // If the data key contains a dot, we will replace it with another character
             // sequence so it doesn't interfere with dot processing when working with
             // array based validation rules and array_dot later in the validations.
             if (Str::contains($key, '.')) {
-                $newData[str_replace('.', '->', $key)] = $value;
+                $result[str_replace('.', '->', $key)] = $value;
             } else {
-                $newData[$key] = $value;
+                $result[$key] = $value;
             }
         }
 
-        return $newData;
+        return $result;
     }
 
     public function attributes(): ?array
@@ -72,10 +100,6 @@ class Censor {
         return $this->censorKey;
     }
 
-    public function replacement(): ?array
-    {
-        return $this->replacement;
-    }
 
     public function messagesWithDot(): array
     {
@@ -84,31 +108,21 @@ class Censor {
 
     public function messages(): array
     {
-        $messages = [];
-
-        foreach($this->validations as $attribute => $line)
-        {
-            if (!isset($line['messages']))
-                continue;
-
-            $messages[$attribute] = $line['messages'];
-        }
-
-        return $messages;
+        return array_map(fn($validation) => $validation->messages(), array_filter($this->validations, fn($validation) => !empty($validation->messages())));
     }
 
-    public function messagesWithTranslate(): array
+    public function translatedMessages(): array
     {
         $validator = $this->validator();
         $messages = [];
 
-        foreach($this->validations as $attribute => $line)
+        foreach($this->validations as $validation)
         {
-            if (!isset($line['messages']))
+            if (empty($validation->messages()))
                 continue;
 
-            foreach($line['messages'] as $rule => $text) {
-                $messages[$attribute][$rule] = $validator->makeReplacements($text, $line['name'], $rule, $line['rules']->ruleParameters($rule) ?? []);
+            foreach($validation->messages() as $rule => $text) {
+                $messages[$validation->attribute()][$rule] = $validator->makeReplacements($text, $validation->name(), $rule, $validation->ruleParameters($rule) ?? []);
             }
         }
 
@@ -117,45 +131,25 @@ class Censor {
 
     public function names(): array
     {
-        $names = [];
-
-        foreach($this->validations as $attribute => $line)
-        {
-            if (!isset($line['name']))
-                continue;
-            $names[$attribute] = $line['name'];
-        }
-
-        return $names;
+        return array_map(fn($validation) => $validation->name() ?: $validation->attribute(), $this->validations);
     }
 
     public function originalRules(): array
     {
-        $rules = [];
-
-        foreach($this->validations as $attribute => $line)
-            $rules[$attribute] = $line['rules']->originalRules();
-
-        return $rules;
+        return array_map(fn($validation) => $validation->originalRules(), $this->validations);
     }
 
-    public function rules(): array
+    public function computedRules(): array
     {
-        $rules = [];
-
-        foreach($this->validations as $attribute => $line) {
-            $rules[$attribute] = $line['rules']->rules();
-        }
-
-        return $rules;
+        return array_map(fn($validation) => $validation->computedRules(), $this->validations);
     }
 
     public function jsRules(): array
     {
         $rules = [];
 
-        foreach($this->validations as $attribute => $line) {
-            $rules = array_merge_recursive($rules, $line['rules']->js());
+        foreach($this->validations as $validation) {
+            $rules = array_merge_recursive($rules, $validation->jsRules());
         }
 
         return $rules;
@@ -163,14 +157,14 @@ class Censor {
 
     public function validator(): ValidatorEx
     {
-        return $this->getValidationFactory()->make($this->data() ?? [], $this->originalRules(), $this->messagesWithDot(), $this->names());
+        return $this->getValidationFactory()->make($this->input() ?? [], $this->originalRules(), $this->messagesWithDot(), $this->names());
     }
 
     public function js(): array
     {
         return [
             'rules' => $this->jsRules(),
-            'messages' => $this->messagesWithTranslate(),
+            'messages' => $this->translatedMessages(),
         ];
     }
 

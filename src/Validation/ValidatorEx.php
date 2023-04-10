@@ -4,6 +4,7 @@ namespace Addons\Censor\Validation;
 
 use BadMethodCallException;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rules\Unique;
 use Illuminate\Validation\Validator as BaseValidator;
 
 /**

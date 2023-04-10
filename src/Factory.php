@@ -3,20 +3,19 @@
 namespace Addons\Censor;
 
 use Addons\Censor\Censor;
-use Addons\Censor\Ruling\Ruler;
 
 class Factory {
 
-    public $ruler;
+    public $loader;
 
-    public function __construct(Ruler $ruler)
+    public function __construct(CensorLoader $loader)
     {
-        $this->ruler = $ruler;
+        $this->loader = $loader;
     }
 
     public function make(string $key, array $attributes, array $replacement = null): Censor
     {
-        return new Censor($this->ruler, $key, $attributes, $replacement);
+        return new Censor($this->loader, $key, $attributes, $replacement);
     }
 
     /**
@@ -28,7 +27,7 @@ class Factory {
      */
     public function addNamespace(string $namespace, string $hint = null): void
     {
-        $this->ruler->addNamespace($namespace, $hint);
+        $this->loader->addNamespace($namespace, $hint);
     }
 
 }

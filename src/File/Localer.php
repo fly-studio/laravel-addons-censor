@@ -293,6 +293,6 @@ abstract class Localer extends NamespacedItemResolver {
         return $this->loader->getPath($fallback ? $this->fallback : $this->locale, $group, $namespace);
     }
 
-    public abstract function get(string $key, array $ruleKeys, array $replacement = null, string $locale = null);
+    public abstract function get(string $key, array $ruleKeys, string $locale = null, bool $fallback = true);
 
 }

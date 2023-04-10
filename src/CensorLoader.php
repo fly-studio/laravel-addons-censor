@@ -1,20 +1,21 @@
 <?php
 
-namespace Addons\Censor\Ruling;
+namespace Addons\Censor;
 
 use Illuminate\Support\Arr;
 use Addons\Censor\File\Localer;
+use Addons\Censor\Validation\Validation;
 use Addons\Censor\Exceptions\RuleNotFoundException;
 
-class Ruler extends Localer {
+class CensorLoader extends Localer {
 
     /**
      * 读取censors目录，获得$censorFile中的所有validation
      */
-    public function get(string $censorFile, array $ruleKeys, array $replacement = null, string $locale = null): array
+    public function get(string $censorFile, array $ruleKeys, string $locale = null, bool $fallback = true): array
     {
         //get all
-        $validations = $this->getLine($censorFile, $locale);
+        $validations = $this->getLine($censorFile, $locale, $fallback);
 
         if (empty($validations))
             throw new RuleNotFoundException('[Censor] Censor KEY is not exists: ['. $censorFile. ']. You may create it.', $this, $censorFile);
@@ -26,15 +27,12 @@ class Ruler extends Localer {
         if (!empty($diff = array_diff($ruleKeys, array_keys($validations))))
             throw new RuleNotFoundException('[Censor] Rule keys are not exists: ['.implode(', ', $diff). '].', $this, $censorFile);
 
-        foreach($validations as $attribute => &$v)
-            $v['rules'] = $this->parseRules($attribute, $v['rules'], $replacement);
+        $result = [];
+        foreach($validations as $attribute => $v) {
+            $result[$attribute] = new Validation($attribute, $v['name'], $v['rules'] ?? [], $v['messages'] ?? []);
+        }
 
-        return $validations;
-    }
-
-    private function parseRules(string $attribute, $rules, array $replacement = null): Rules
-    {
-        return new Rules($attribute, $rules, $replacement);
+        return $result;
     }
 
 }

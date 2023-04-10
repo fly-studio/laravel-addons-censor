@@ -2,7 +2,6 @@
 namespace Addons\Censor;
 
 use Addons\Censor\Factory;
-use Addons\Censor\Ruling\Ruler;
 use Addons\Censor\File\FileLoader;
 use Illuminate\Support\Facades\Event;
 use Addons\Censor\Validation\ValidatorEx;
@@ -26,19 +25,19 @@ class ServiceProvider extends BaseServiceProvider
     {
         $this->app->instance('path.censors', $this->censorsPath());
 
-        $this->app->singleton('ruler.loader', function ($app) {
+        $this->app->singleton('censor.file_loader', function ($app) {
             return new FileLoader($app['files'], $app['path.censors']);
         });
 
-        $this->app->singleton('ruler', function ($app) {
-            $loader = $app['ruler.loader'];
+        $this->app->singleton('censor.loader', function ($app) {
+            $loader = $app['censor.file_loader'];
 
             // When registering the translator component, we'll need to set the default
             // locale as well as the fallback locale. So, we'll grab the application
             // configuration so we can easily get both of these values from there.
             $locale = $app['config']['app.locale'];
 
-            $ruler = new Ruler($loader, $locale);
+            $ruler = new CensorLoader($loader, $locale);
 
             $ruler->setFallback($app['config']['app.fallback_locale']);
 
@@ -46,10 +45,10 @@ class ServiceProvider extends BaseServiceProvider
         });
 
         $this->app->singleton('censor', function ($app) {
-            return new Factory($app['ruler']);
+            return new Factory($app['censor.loader']);
         });
 
-        $this->app->alias('ruler', Ruler::class);
+        $this->app->alias('censor.loader', CensorLoader::class);
         $this->app->alias('censor', Factory::class);
 
     }
