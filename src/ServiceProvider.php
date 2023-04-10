@@ -1,10 +1,10 @@
 <?php
 namespace Addons\Censor;
 
-use Event;
 use Addons\Censor\Factory;
 use Addons\Censor\Ruling\Ruler;
 use Addons\Censor\File\FileLoader;
+use Illuminate\Support\Facades\Event;
 use Addons\Censor\Validation\ValidatorEx;
 use Illuminate\Foundation\Events\LocaleUpdated;
 use Illuminate\Support\ServiceProvider as BaseServiceProvider;

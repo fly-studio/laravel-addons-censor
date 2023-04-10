@@ -94,13 +94,15 @@ class ValidatorEx extends BaseValidator {
     {
         $rule = Str::snake(substr($method, 8));
 
-        if (method_exists($this, $method))
+        if (method_exists($this, $method)) { // call the private, protected
             return $this->$method(...$parameters);
-        else if (isset($this->extensions[$rule])) {
+        } else if (isset($this->extensions[$rule])) {
             return $this->callExtension($rule, $parameters);
         }
 
-        throw new BadMethodCallException("Method [$method] does not exist.");
+        throw new BadMethodCallException(sprintf(
+            'Method %s::%s does not exist.', static::class, $method
+        ));
     }
 
 }

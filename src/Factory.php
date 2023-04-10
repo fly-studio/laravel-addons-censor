@@ -14,7 +14,7 @@ class Factory {
         $this->ruler = $ruler;
     }
 
-    public function make(string $key, array $attributes, array $replacement = null)
+    public function make(string $key, array $attributes, array $replacement = null): Censor
     {
         return new Censor($this->ruler, $key, $attributes, $replacement);
     }
@@ -26,7 +26,7 @@ class Factory {
      * @param  string  $hint
      * @return void
      */
-    public function addNamespace(string $namespace, string $hint = null)
+    public function addNamespace(string $namespace, string $hint = null): void
     {
         $this->ruler->addNamespace($namespace, $hint);
     }

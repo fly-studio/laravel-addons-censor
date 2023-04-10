@@ -7,44 +7,44 @@ use Illuminate\Support\Str;
 use Illuminate\Contracts\Translation\Loader;
 use Illuminate\Support\NamespacedItemResolver;
 
-class Localer extends NamespacedItemResolver {
+abstract class Localer extends NamespacedItemResolver {
 
     /**
      * The loader implementation.
      *
-     * @var \Illuminate\Translation\FileLoader
+     * @var FileLoader
      */
-    protected $loader;
+    protected FileLoader $loader;
 
     /**
      * The default locale being used by the LocalePool.
      *
      * @var string
      */
-    protected $locale;
+    protected string $locale;
 
     /**
      * The fallback locale used by the LocalePool.
      *
      * @var string
      */
-    protected $fallback;
+    protected string $fallback;
 
     /**
      * The array of loaded locale groups.
      *
      * @var array
      */
-    protected $loaded = [];
+    protected array $loaded = [];
 
     /**
      * Create a new LocalePool instance.
      *
-     * @param  \Illuminate\Contracts\Translation\Loader  $loader
+     * @param  FileLoader  $loader
      * @param  string  $locale
      * @return void
      */
-    public function __construct(Loader $loader, string $locale)
+    public function __construct(FileLoader $loader, string $locale)
     {
         $this->loader = $loader;
         $this->locale = $locale;
@@ -52,6 +52,7 @@ class Localer extends NamespacedItemResolver {
 
     /**
      * Load the specified language group.
+     * 使用FileLoader读取文件
      *
      * @param  string  $namespace
      * @param  string  $group
@@ -116,14 +117,19 @@ class Localer extends NamespacedItemResolver {
 
     /**
      * Get the translation for the given key.
+     * 此函数参照的读取翻译文件的函数
+     * 当$key为namespace::filename.key时，获取具体的key的value项
+     * 当$key为namespace::filename时，获取的是整个文件
+     *
+     * 一般情况下Line指namespace::filename.key
      *
      * @param  string  $key
-     * @param  array|null|Model   $replacement
+     * @param  array|null   $replacement
      * @param  string|null  $locale
      * @param  bool  $fallback
      * @return string|array|null
      */
-    public function getLine(string $key, array $replacement = null, string $locale = null, bool $fallback = true)
+    public function getLine(string $key, string $locale = null, bool $fallback = true)
     {
         list($namespace, $group, $item) = $this->parseKey($key);
 
@@ -135,7 +141,7 @@ class Localer extends NamespacedItemResolver {
 
         foreach ($locales as $locale) {
             if (! is_null($line = $this->read(
-                $namespace, $group, $locale, $item, $replacement
+                $namespace, $group, $locale, $item
             ))) {
                 break;
             }
@@ -277,10 +283,16 @@ class Localer extends NamespacedItemResolver {
         return $segments;
     }
 
+    /**
+     * 获取文件路径
+     * 注意：由于FileLoader支持多个搜索目录，此函数得到的结果是第一个目录的文件路径，大部分情况下够用。目前也只有异常时在使用。
+     */
     public function getPath(string $key, bool $fallback = false)
     {
-        list($namespace, $group, $item) = $this->parseKey($key);
+        [$namespace, $group, $item] = $this->parseKey($key);
         return $this->loader->getPath($fallback ? $this->fallback : $this->locale, $group, $namespace);
     }
+
+    public abstract function get(string $key, array $ruleKeys, array $replacement = null, string $locale = null);
 
 }

@@ -4,32 +4,32 @@ namespace Addons\Censor\Ruling;
 
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationRuleParser;
-use Illuminate\Contracts\Validation\Rule as RuleContract;
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Validation\NestedRules;
 
 class Rules {
 
-    protected $attribute;
-    protected $rules;
-    protected $originalRules;
+    protected string $attribute;
+    protected ?array $rules;
+    protected ?array $originalRules;
 
-    public function __construct(string $attribute, $ruleLines, array $replacement = null)
+    public function __construct(string $attribute, $ruleLines, ?array $replacement = null)
     {
         $this->attribute = $attribute;
         $this->parse($ruleLines, $replacement);
     }
 
-    public function originalRules()
+    public function originalRules(): ?array
     {
         return $this->originalRules;
     }
 
-    public function rules()
+    public function rules(): ?array
     {
         return $this->rules;
     }
 
-    public function ruleParameters(string $ruleName)
+    public function ruleParameters(string $ruleName): null|array|ValidationRule|NestedRules
     {
         $ruleName = Str::studly($ruleName);
         return $this->rules[$ruleName] ?? null;
@@ -46,8 +46,11 @@ class Rules {
         {
             if (empty($ruleName))
                 continue;
-            $parameters = empty($parameters) || $parameters instanceof RuleContract || $parameters instanceof NestedRules ? true : (count($parameters) == 1 ? $parameters[0] : $parameters);
+            $parameters = empty($parameters) || $parameters instanceof ValidationRule || $parameters instanceof NestedRules
+                ? true
+                : (count($parameters) == 1 ? $parameters[0] : $parameters);
             $ruleName = strtolower($ruleName);
+
             switch ($ruleName) { // 1
                 case 'alpha':
                     $ruleName = 'regex';
@@ -176,7 +179,6 @@ class Rules {
                 case 'url':
                 case 'regex':
                 case 'required':
-                case 'ansi':
                 case 'phone':
                 case 'idcard':
                 case 'notzero':
@@ -195,7 +197,7 @@ class Rules {
         return $rules;
     }
 
-    protected function parse($ruleLines, array $replacement = null)
+    protected function parse($ruleLines, ?array $replacement = null): void
     {
         $this->originalRules = [];
         $this->rules = [];
@@ -210,9 +212,11 @@ class Rules {
         {
             if (is_string($line))
                 $line = $this->replace($line, $replacement);
-            list($ruleName, $parameters) = ValidationRuleParser::parse($line);
+
+            [$ruleName, $parameters] = ValidationRuleParser::parse($line);
+
             $this->originalRules[] = $line;
-            if ($ruleName instanceof RuleContract || $ruleName instanceof NestedRules) {
+            if ($ruleName instanceof ValidationRule || $ruleName instanceof NestedRules) {
                 $this->rules[get_class($ruleName)] = $ruleName;
             } else {
                 $this->rules[$ruleName] = $parameters;
@@ -220,7 +224,7 @@ class Rules {
         }
     }
 
-    protected function replace(string $line, array $replacement = null)
+    protected function replace(string $line, ?array $replacement = null): string
     {
         $line = str_replace(',{{attribute}}', ','.$this->attribute, $line);
         //替换rule中的{{  }}
@@ -234,7 +238,7 @@ class Rules {
             }, $line);
     }
 
-    public function isNumeric()
+    public function isNumeric(): bool
     {
         foreach(['Digits', 'DigitsBetween', 'Numeric', 'Integer'] as $pattern)
         {
@@ -245,7 +249,7 @@ class Rules {
         return false;
     }
 
-    public function isArray()
+    public function isArray(): bool
     {
         return array_key_exists('Array', $this->rules());
     }

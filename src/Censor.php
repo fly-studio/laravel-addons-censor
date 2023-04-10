@@ -5,31 +5,32 @@ namespace Addons\Censor;
 use Illuminate\Support\Str;
 use Illuminate\Support\Arr;
 use Addons\Censor\Ruling\Ruler;
+use Addons\Censor\Validation\ValidatorEx;
 use Illuminate\Contracts\Validation\Factory;
+use Illuminate\Validation\Factory as FactoryInstance;
 
 class Censor {
 
-    protected $data;
-    protected $censorKey;
-    protected $attributes;
-    protected $replacement;
-    protected $validations;
+    protected ?array $data;
+    protected string $censorKey;
+    protected ?array $attributes;
+    protected ?array $replacement;
+    protected ?array $validations;
 
-    public function __construct(Ruler $ruler, string $censorKey, array $attributes, array $replacement = null, string $locale = null)
+    public function __construct(Ruler $ruler, string $censorKey, array $attributes, ?array $replacement = null, ?string $locale = null)
     {
-        $this->ruler = $ruler;
         $this->censorKey = $censorKey;
         $this->replacement = $replacement;
         $this->validations = $ruler->get($censorKey, $attributes, $replacement, $locale);
         $this->attributes = array_keys($this->validations);
     }
 
-    public function validData()
+    public function validData(): array
     {
         return Arr::only($this->parseData($this->data), $this->attributes);
     }
 
-    public function data(array $data = null)
+    public function data(?array $data = null): static|array|null
     {
         if (is_null($data))
             return $this->data;
@@ -39,7 +40,7 @@ class Censor {
         return $this;
     }
 
-    protected function parseData(array $data)
+    protected function parseData(array $data): array
     {
         $newData = [];
 
@@ -61,27 +62,27 @@ class Censor {
         return $newData;
     }
 
-    public function attributes()
+    public function attributes(): ?array
     {
         return $this->attributes;
     }
 
-    public function censorKey()
+    public function censorKey(): string
     {
         return $this->censorKey;
     }
 
-    public function replacement()
+    public function replacement(): ?array
     {
         return $this->replacement;
     }
 
-    public function messagesWithDot()
+    public function messagesWithDot(): array
     {
         return Arr::dot($this->messages());
     }
 
-    public function messages()
+    public function messages(): array
     {
         $messages = [];
 
@@ -96,7 +97,7 @@ class Censor {
         return $messages;
     }
 
-    public function messageWithTranslate()
+    public function messagesWithTranslate(): array
     {
         $validator = $this->validator();
         $messages = [];
@@ -105,6 +106,7 @@ class Censor {
         {
             if (!isset($line['messages']))
                 continue;
+
             foreach($line['messages'] as $rule => $text) {
                 $messages[$attribute][$rule] = $validator->makeReplacements($text, $line['name'], $rule, $line['rules']->ruleParameters($rule) ?? []);
             }
@@ -113,7 +115,7 @@ class Censor {
         return $messages;
     }
 
-    public function names()
+    public function names(): array
     {
         $names = [];
 
@@ -127,7 +129,7 @@ class Censor {
         return $names;
     }
 
-    public function originalRules()
+    public function originalRules(): array
     {
         $rules = [];
 
@@ -137,45 +139,47 @@ class Censor {
         return $rules;
     }
 
-    public function rules()
+    public function rules(): array
     {
         $rules = [];
 
-        foreach($this->validations as $attribute => $line)
+        foreach($this->validations as $attribute => $line) {
             $rules[$attribute] = $line['rules']->rules();
+        }
 
         return $rules;
     }
 
-    public function jsRules()
+    public function jsRules(): array
     {
         $rules = [];
 
-        foreach($this->validations as $attribute => $line)
+        foreach($this->validations as $attribute => $line) {
             $rules = array_merge_recursive($rules, $line['rules']->js());
+        }
 
         return $rules;
     }
 
-    public function validator()
+    public function validator(): ValidatorEx
     {
         return $this->getValidationFactory()->make($this->data() ?? [], $this->originalRules(), $this->messagesWithDot(), $this->names());
     }
 
-    public function js()
+    public function js(): array
     {
         return [
             'rules' => $this->jsRules(),
-            'messages' => $this->messageWithTranslate(),
+            'messages' => $this->messagesWithTranslate(),
         ];
     }
 
     /**
      * Get a validation factory instance.
      *
-     * @return \Illuminate\Contracts\Validation\Factory
+     * @return \Illuminate\Validation\Factory
      */
-    protected function getValidationFactory()
+    protected function getValidationFactory(): FactoryInstance
     {
         return app(Factory::class);
     }

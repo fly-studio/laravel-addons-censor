@@ -5,7 +5,6 @@ namespace Addons\Censor\Validation;
 use RuntimeException;
 use Addons\Censor\Factory;
 use Illuminate\Http\Request;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Contracts\Support\Arrayable;
 use Addons\Censor\Exceptions\CensorException;
 use Illuminate\Contracts\Validation\Validator;
@@ -15,9 +14,9 @@ trait ValidatesRequests
 {
     use BaseValidatesRequests;
 
-    public function censorScripts($censorKey, $attributes, Model $model = null)
+    public function censorScripts($censorKey, $attributes, ?array $replacement = null)
     {
-        $censor = $this->getCensorFactory()->make($censorKey, $attributes, $model);
+        $censor = $this->getCensorFactory()->make($censorKey, $attributes, $replacement);
 
         return $censor->js();
     }
@@ -29,23 +28,16 @@ trait ValidatesRequests
      * @param  string  $censorKey
      * @param  array  $attributes
      * @param  Model|null $model
-     * @return array|Exception
+     * @return array|\Throwable
      */
-    public function censor($request, string $censorKey, array $attributes, array $replacement = null)
-    {
+    public function censor($request, string $censorKey, array $attributes, ?array $replacement = null): ?array {
         $data = null;
 
-        if ($request instanceof Request)
-        {
+        if ($request instanceof Request) {
             $data = $request->all();
-            //$json = $request->json()->all();
-
-            //$data = is_array($json) ? array_merge($input, $json) : $input;
-        } else if ($request instanceof Arrayable)
-        {
+        } else if ($request instanceof Arrayable) {
             $data = $request->toArray();
-        } else if (is_array($request))
-        {
+        } else if (is_array($request)) {
             $data = $request;
         } else {
             throw new RuntimeException('The parameter#0 must be Array or Request.');
@@ -64,7 +56,7 @@ trait ValidatesRequests
      * @param  \Illuminate\Contracts\Validation\Validator  $validator
      * @return void
      *
-     * @throws Addons\Censor\Exceptions\CensorException
+     * @throws \Addons\Censor\Exceptions\CensorException
      */
     protected function throwValidationException(array $data, $validator)
     {
@@ -76,7 +68,7 @@ trait ValidatesRequests
      *
      * @return \Addons\Censor\Factory
      */
-    protected function getCensorFactory()
+    protected function getCensorFactory(): Factory
     {
         return app(Factory::class);
     }
