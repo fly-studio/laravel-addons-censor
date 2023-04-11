@@ -13,20 +13,7 @@ use Illuminate\Validation\Validator as BaseValidator;
  */
 class ValidatorEx extends BaseValidator {
 
-    /**
-     * Allow only alphabets, spaces and dashes (hyphens and underscores)
-     *
-     * @param string $attribute
-     * @param mixed $value
-     * @return bool
-     */
-    protected function validateAnsi( $attribute, $value, $parameters )
-    {
-        return true;
-    }
-
-    protected function validatePhone($attribute, $value, $parameters)
-    {
+    protected function validatePhone($attribute, $value, $parameters) {
         $pattern = '/[0-9\-\s]*/i';
         empty($parameters) && $parameters = ['zh-CN'];
         switch (strtolower($parameters[0])) {
@@ -41,17 +28,18 @@ class ValidatorEx extends BaseValidator {
         return preg_match($pattern, $value);
     }
 
-    protected function validateNotZero($attribute, $value, $parameters)
-    {
-        if (!is_numeric($value)) return true;
+    protected function validateNotZero($attribute, $value, $parameters) {
+        if (!is_numeric($value))
+            return true;
+
         $value += 0;
         return !empty($value);
     }
 
-    protected function validateIdCard($attribute, $value, $parameters)
-    {
+    protected function validateIdCard($attribute, $value, $parameters) {
         $pattern = '/[0-9\-\s]*/i';
         empty($parameters) && $parameters = ['zh-CN'];
+
         switch (strtolower($parameters[0])) {
             case 'us':
                 $pattern = '/^\d{6}-\d{2}-\d{4}$/';
@@ -79,6 +67,7 @@ class ValidatorEx extends BaseValidator {
                 }
                 break;
         }
+
         return preg_match($pattern, $value);
     }
 
@@ -91,8 +80,7 @@ class ValidatorEx extends BaseValidator {
      *
      * @throws \BadMethodCallException
      */
-    public function __call($method, $parameters)
-    {
+    public function __call($method, $parameters) {
         $rule = Str::snake(substr($method, 8));
 
         if (method_exists($this, $method)) { // call the private, protected

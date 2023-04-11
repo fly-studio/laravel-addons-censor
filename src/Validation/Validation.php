@@ -7,23 +7,18 @@ use Illuminate\Validation\ValidationRuleParser;
 
 class Validation {
 
-    protected array|string|null $rawRules;
+    private array|string|null $rawRules;
     protected string $attribute;
     protected ?string $name;
     protected ?array $computedRules;
-    protected ?array $messages;
     protected ?array $originalRules;
+    protected ?array $messages;
 
-    public function __construct(string $attribute, ?string $name, array|string|null $rawRules, ?array $messages = null)
-    {
+    public function __construct(string $attribute, ?string $name, array|string|null $rawRules, ?array $messages = null) {
         $this->attribute = $attribute;
         $this->name = $name;
         $this->rawRules = $rawRules;
         $this->messages = $messages;
-    }
-
-    public function rawRules(): array|string|null {
-        return $this->rawRules;
     }
 
     public function attribute(): string {
@@ -38,33 +33,29 @@ class Validation {
         return $this->messages;
     }
 
-    public function originalRules(): ?array
-    {
+    public function originalRules(): ?array {
         return $this->originalRules;
     }
 
-    public function computedRules(): ?array
-    {
+    public function computedRules(): ?array {
         return $this->computedRules;
     }
 
-    public function ruleParameters(string $ruleName): null|array|object
-    {
+    public function ruleParameters(string $ruleName): null|array|object {
         $ruleName = Str::studly($ruleName);
         return $this->computedRules[$ruleName] ?? null;
     }
 
-    public function jsRules()
-    {
+    public function jsRules() {
         $rules = [];
         // <input name="rule[]" />
         $attribute = $this->isArray() ? $this->attribute. '[]' : $this->attribute;
 
         $rules[$attribute] = [];
-        foreach($this->computedRules() as $ruleName => $parameters)
-        {
+        foreach($this->computedRules() as $ruleName => $parameters) { // 2
             if (empty($ruleName))
                 continue;
+
             $parameters = empty($parameters) || is_object($parameters)
                 ? true
                 : (count($parameters) == 1 ? $parameters[0] : $parameters);
@@ -96,8 +87,7 @@ class Validation {
                     $parameters = '('.implode('|', array_map('preg_quote', $parameters)).')';
                     break;
                 case 'digits':
-                    if (!empty($parameters))
-                    {
+                    if (!empty($parameters)) {
                         $rules[$attribute] += ['rangelength' => [floatval($parameters), floatval($parameters)]];
                         $parameters = true;
                     }
@@ -149,7 +139,7 @@ class Validation {
                     $ruleName = 'range';
                     $parameters = [floatval($parameters[0]), floatval($parameters[1])] ;
                     break;
-                case 'confirmed': //改变attribute
+                case 'confirmed': // 改变attribute
                     $parameters = '[name="'.$attribute.'"]';
                     $attribute = $attribute.'_confirmation';
                     !isset($rules[$attribute]) && $rules[$attribute] = [];
@@ -208,17 +198,20 @@ class Validation {
                 default:
                     continue 2;
             }
+
             $rules[$attribute] +=  [$ruleName => $parameters];
         }
-        foreach($rules as $key => $value)
-            if (empty($value))
+
+        foreach($rules as $key => $value) {
+            if (empty($value)) {
                 unset($rules[$key]);
+            }
+        }
 
         return $rules;
     }
 
-    public function parse(?array $input = null, ?array $extraData = null): void
-    {
+    public function parse(?array $input = null, ?array $extraData = null): void {
         $this->originalRules = [];
         $this->computedRules = [];
         $rawRules = $this->rawRules;
@@ -229,17 +222,16 @@ class Validation {
         if (!is_array($rawRules))
             $rawRules = explode('|', $rawRules);
 
-        foreach($rawRules as $rule)
-        {
+        foreach($rawRules as $rule) {
             if ($rule instanceof \Closure)
                 $rule = $this->callRule($rule, $input, $extraData);
 
-            [$ruleName, $parameters] = ValidationRuleParser::parse($rule);
-
             $this->originalRules[] = $rule;
-            if (is_object($ruleName)) {
-                $this->computedRules[get_class($ruleName)] = $ruleName;
+
+            if (is_object($rule)) {
+                $this->computedRules[get_class($rule)] = $rule;
             } else {
+                [$ruleName, $parameters] = ValidationRuleParser::parse($rule);
                 $this->computedRules[$ruleName] = $parameters;
             }
         }
@@ -249,10 +241,8 @@ class Validation {
         return call_user_func_array($callback, [$this, $input, $extraData]);
     }
 
-    public function isNumeric(): bool
-    {
-        foreach(['Digits', 'DigitsBetween', 'Numeric', 'Integer'] as $pattern)
-        {
+    public function isNumeric(): bool {
+        foreach(['Digits', 'DigitsBetween', 'Numeric', 'Integer'] as $pattern) {
             if (array_key_exists($pattern, $this->computedRules()))
                 return true;
         }
@@ -260,8 +250,7 @@ class Validation {
         return false;
     }
 
-    public function isArray(): bool
-    {
+    public function isArray(): bool {
         return array_key_exists('Array', $this->computedRules());
     }
 

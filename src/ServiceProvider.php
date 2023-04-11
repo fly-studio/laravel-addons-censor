@@ -30,18 +30,17 @@ class ServiceProvider extends BaseServiceProvider
         });
 
         $this->app->singleton('censor.loader', function ($app) {
-            $loader = $app['censor.file_loader'];
+            $fileLoader = $app['censor.file_loader'];
 
             // When registering the translator component, we'll need to set the default
             // locale as well as the fallback locale. So, we'll grab the application
             // configuration so we can easily get both of these values from there.
             $locale = $app['config']['app.locale'];
 
-            $ruler = new CensorLoader($loader, $locale);
+            $loader = new CensorLoader($fileLoader, $locale);
+            $loader->setFallback($app['config']['app.fallback_locale']);
 
-            $ruler->setFallback($app['config']['app.fallback_locale']);
-
-            return $ruler;
+            return $loader;
         });
 
         $this->app->singleton('censor', function ($app) {

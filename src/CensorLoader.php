@@ -12,8 +12,7 @@ class CensorLoader extends Localer {
     /**
      * 读取censors目录，获得$censorFile中的所有validation
      */
-    public function get(string $censorFile, array $ruleKeys, string $locale = null, bool $fallback = true): array
-    {
+    public function get(string $censorFile, array $ruleKeys, string $locale = null, bool $fallback = true): array {
         //get all
         $validations = $this->getLine($censorFile, $locale, $fallback);
 

@@ -16,16 +16,14 @@ class Censor {
     protected string $censorKey;
     protected ?string $locale;
     protected ?array $attributes;
-    protected ?array $extraData;
+    protected ?array $extraData = null;
     protected ?array $validations;
 
-    public function __construct(CensorLoader $loader, string $censorKey, array $attributes, ?array $extraData = null, ?string $locale = null)
-    {
+    public function __construct(CensorLoader $loader, string $censorKey, array $attributes, ?string $locale = null) {
+        $this->loader = $loader;
         $this->censorKey = $censorKey;
         $this->attributes = $attributes;
-        $this->extraData = $extraData;
         $this->locale = $locale;
-        $this->loader = $loader;
     }
 
     public function build(): static {
@@ -44,13 +42,11 @@ class Censor {
         return $this;
     }
 
-    public function output(): array
-    {
+    public function output(): array {
         return Arr::only($this->parseInput($this->input()), $this->attributes);
     }
 
-    public function input(?array $input = null): static|array|null
-    {
+    public function input(?array $input = null): static|array|null {
         if (func_num_args() == 0)
             return $this->input;
 
@@ -58,8 +54,7 @@ class Censor {
         return $this;
     }
 
-    public function extraData(?array $extraData = null): array|static|null
-    {
+    public function extraData(?array $extraData = null): array|static|null {
         if (func_num_args() == 0)
             return $this->extraData;
 
@@ -67,9 +62,7 @@ class Censor {
         return $this;
     }
 
-
-    protected function parseInput(array $data): array
-    {
+    protected function parseInput(array $data): array {
         $result = [];
 
         foreach ($data as $key => $value) {
@@ -90,29 +83,23 @@ class Censor {
         return $result;
     }
 
-    public function attributes(): ?array
-    {
+    public function attributes(): ?array {
         return $this->attributes;
     }
 
-    public function censorKey(): string
-    {
+    public function censorKey(): string {
         return $this->censorKey;
     }
 
-
-    public function messagesWithDot(): array
-    {
+    public function messagesWithDot(): array {
         return Arr::dot($this->messages());
     }
 
-    public function messages(): array
-    {
+    public function messages(): array {
         return array_map(fn($validation) => $validation->messages(), array_filter($this->validations, fn($validation) => !empty($validation->messages())));
     }
 
-    public function translatedMessages(): array
-    {
+    public function translatedMessages(): array {
         $validator = $this->validator();
         $messages = [];
 
@@ -129,23 +116,19 @@ class Censor {
         return $messages;
     }
 
-    public function names(): array
-    {
+    public function names(): array {
         return array_map(fn($validation) => $validation->name() ?: $validation->attribute(), $this->validations);
     }
 
-    public function originalRules(): array
-    {
+    public function originalRules(): array {
         return array_map(fn($validation) => $validation->originalRules(), $this->validations);
     }
 
-    public function computedRules(): array
-    {
+    public function computedRules(): array {
         return array_map(fn($validation) => $validation->computedRules(), $this->validations);
     }
 
-    public function jsRules(): array
-    {
+    public function jsRules(): array {
         $rules = [];
 
         foreach($this->validations as $validation) {
@@ -155,13 +138,11 @@ class Censor {
         return $rules;
     }
 
-    public function validator(): ValidatorEx
-    {
+    public function validator(): ValidatorEx {
         return $this->getValidationFactory()->make($this->input() ?? [], $this->originalRules(), $this->messagesWithDot(), $this->names());
     }
 
-    public function js(): array
-    {
+    public function js(): array {
         return [
             'rules' => $this->jsRules(),
             'messages' => $this->translatedMessages(),
@@ -173,8 +154,7 @@ class Censor {
      *
      * @return \Illuminate\Validation\Factory
      */
-    protected function getValidationFactory(): FactoryInstance
-    {
+    protected function getValidationFactory(): FactoryInstance {
         return app(Factory::class);
     }
 

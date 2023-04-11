@@ -13,9 +13,9 @@ class Factory {
         $this->loader = $loader;
     }
 
-    public function make(string $key, array $attributes, array $replacement = null): Censor
+    public function make(string $key, array $attributes): Censor
     {
-        return new Censor($this->loader, $key, $attributes, $replacement);
+        return new Censor($this->loader, $key, $attributes);
     }
 
     /**
